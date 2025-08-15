@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Brutal PSL Facial Rater</title>
-
 <style>
   body {
     background: black;
@@ -68,10 +67,13 @@
     <img id="uploadedImg">
   </div>
 </div>
+
+<!-- Face API JS -->
 <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 <script>
 async function loadModels() {
-  const MODEL_URL = "https://cdn.jsdelivr.net/npm/face-api.js/models";
+  // FIXED: Use working model host
+  const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
   let models = [
     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
@@ -127,35 +129,43 @@ async function rateFace() {
   let img = await faceapi.bufferToImage(file);
   document.getElementById("uploadedImg").src = img.src;
 
-  const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-  if (!detection) return alert("No face detected!");
+  try {
+    const detection = await faceapi
+      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks();
 
-  let landmarks = detection.landmarks;
+    if (!detection) return alert("No face detected!");
 
-  // Simple symmetry calc: difference between left and right eye distances
-  let leftEye = landmarks.getLeftEye();
-  let rightEye = landmarks.getRightEye();
-  let symmetryPenalty = Math.abs((leftEye[3].x - leftEye[0].x) - (rightEye[3].x - rightEye[0].x)) / 10;
+    let landmarks = detection.landmarks;
 
-  // Jaw penalty: distance from chin to nose vs nose to forehead
-  let jaw = landmarks.getJawOutline();
-  let nose = landmarks.getNose();
-  let jawLen = Math.abs(jaw[8].y - nose[6].y);
-  let upperLen = Math.abs(nose[0].y - landmarks.getLeftEyeBrow()[0].y);
-  let jawPenalty = (jawLen / upperLen) > 1.8 ? 1 : 0; // long face penalty
+    // Simple symmetry calc: difference between left and right eye distances
+    let leftEye = landmarks.getLeftEye();
+    let rightEye = landmarks.getRightEye();
+    let symmetryPenalty = Math.abs((leftEye[3].x - leftEye[0].x) - (rightEye[3].x - rightEye[0].x)) / 10;
 
-  // Fake but consistent beauty score 0–100 based on symmetry and jaw
-  let beautyScore = Math.max(20, 100 - (symmetryPenalty * 10) - (jawPenalty * 15));
+    // Jaw penalty: distance from chin to nose vs nose to forehead
+    let jaw = landmarks.getJawOutline();
+    let nose = landmarks.getNose();
+    let jawLen = Math.abs(jaw[8].y - nose[6].y);
+    let upperLen = Math.abs(nose[0].y - landmarks.getLeftEyeBrow()[0].y);
+    let jawPenalty = (jawLen / upperLen) > 1.8 ? 1 : 0; // long face penalty
 
-  let psl = brutalPSLScore(beautyScore, symmetryPenalty, jawPenalty);
-  let label = getLabel(psl);
-  let roast = getRoast(psl);
+    // Fake but consistent beauty score 0–100 based on symmetry and jaw
+    let beautyScore = Math.max(20, 100 - (symmetryPenalty * 10) - (jawPenalty * 15));
 
-  document.getElementById("beautyScore").innerText = beautyScore.toFixed(1);
-  document.getElementById("pslScore").innerText = psl.toFixed(1);
-  document.getElementById("label").innerText = label;
-  document.getElementById("roast").innerText = roast;
-  document.getElementById("resultCard").style.display = "block";
+    let psl = brutalPSLScore(beautyScore, symmetryPenalty, jawPenalty);
+    let label = getLabel(psl);
+    let roast = getRoast(psl);
+
+    document.getElementById("beautyScore").innerText = beautyScore.toFixed(1);
+    document.getElementById("pslScore").innerText = psl.toFixed(1);
+    document.getElementById("label").innerText = label;
+    document.getElementById("roast").innerText = roast;
+    document.getElementById("resultCard").style.display = "block";
+
+  } catch (err) {
+    alert("Error analysing face: " + err.message);
+  }
 }
 </script>
 </body>
