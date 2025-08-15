@@ -1,111 +1,109 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>PSL Facial Rater</title>
-<style>
-body {
-    background: black;
-    color: white;
-    text-align: center;
-    font-family: Arial, sans-serif;
-}
-.container {
-    max-width: 500px;
-    margin: auto;
-    padding: 20px;
-    background: #111;
-    border-radius: 10px;
-}
-input, button { margin: 10px; }
-.hidden { display: none; }
-#resultCard {
-    margin-top: 20px;
-    background: #222;
-    padding: 15px;
-    border-radius: 10px;
-}
-img { max-width: 100%; border-radius: 10px; margin-top: 10px; }
-</style>
+  <meta charset="UTF-8">
+  <title>PSL Facial Rater ⚡</title>
+  <style>
+    body { background:black; color:white; font-family:Arial; text-align:center; padding:20px; }
+    .container { max-width:500px; margin:auto; background:#111; padding:20px; border-radius:10px; }
+    #loading { margin-top:10px; }
+    .progress-bar { width:100%; background:#333; border-radius:5px; height:15px; margin-top:10px; }
+    .progress-fill { height:15px; background:limegreen; width:0%; border-radius:5px; }
+    img { max-width:100%; border-radius:10px; margin-top:10px; }
+    .hidden { display:none; }
+  </style>
 </head>
 <body>
 <div class="container">
-    <h1>PSL Facial Rater</h1>
-    <input type="file" id="imageUpload" accept="image/*">
-    <button onclick="analyzeFace()">Rate Me</button>
-    <div id="loading" class="hidden">Analyzing...</div>
-    <div id="resultCard" class="hidden">
-        <h2 id="label"></h2>
-        <p>PSL Score: <span id="pslScore"></span></p>
-        <p>Beauty Score: <span id="beautyScore"></span></p>
-        <img id="uploadedImg">
-    </div>
+  <h1>PSL Facial Rater ⚡</h1>
+  <input type="file" id="imageUpload" accept="image/*">
+  <br><button onclick="analyzeFace()">Rate Me</button>
+
+  <div id="loading" class="hidden">
+    <p id="loadingText">Loading models...</p>
+    <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+  </div>
+
+  <div id="resultCard" class="hidden">
+    <h2 id="label"></h2>
+    <p>PSL Score: <span id="pslScore"></span></p>
+    <p>Beauty Score: <span id="beautyScore"></span></p>
+    <img id="uploadedImg" src="">
+  </div>
 </div>
 
-<!-- Load face-api.js -->
-<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 <script>
+function updateProgress(percent) {
+  document.getElementById("progressFill").style.width = percent + "%";
+}
+
+async function loadModels() {
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("loadingText").innerText = "Loading face detection models (0%)...";
+  let steps = 3; // number of model files
+  let loaded = 0;
+
+  async function loadWithProgress(promise) {
+    await promise;
+    loaded++;
+    let percent = Math.round((loaded / steps) * 100);
+    updateProgress(percent);
+    document.getElementById("loadingText").innerText = `Loading face detection models (${percent}%)...`;
+  }
+
+  await loadWithProgress(faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models'));
+  await loadWithProgress(faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models'));
+  await loadWithProgress(faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models'));
+
+  document.getElementById("loading").classList.add("hidden");
+}
+
 function convertBeautyToPSL(score) {
-    if (score < 4) return { psl: 2, label: "Subhuman" };
-    if (score < 5) return { psl: 3.5, label: "MTN" };
-    if (score < 6) return { psl: 5, label: "HTN" };
-    if (score < 7) return { psl: 5.5, label: "Chadlite" };
-    return { psl: 6.5, label: "Giga Chad" };
+  if (score < 40) return { psl: 2, label: "Subhuman" };
+  if (score < 50) return { psl: 3.5, label: "MTN" };
+  if (score < 60) return { psl: 5, label: "HTN" };
+  if (score < 70) return { psl: 5.5, label: "Chadlite" };
+  return { psl: 6.5, label: "Giga Chad" };
 }
 
 async function analyzeFace() {
-    const file = document.getElementById("imageUpload").files[0];
-    if (!file) return alert("Upload a photo first!");
+  const file = document.getElementById("imageUpload").files[0];
+  if (!file) return alert("Upload a photo first!");
 
-    document.getElementById("loading").classList.remove("hidden");
-    document.getElementById("resultCard").classList.add("hidden");
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("loadingText").innerText = "Analyzing face...";
+  updateProgress(50);
 
+  try {
     const img = await faceapi.bufferToImage(file);
-    document.getElementById("uploadedImg").src = URL.createObjectURL(file);
+    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
-    const detection = await faceapi.detectSingleFace(img).withFaceLandmarks();
     if (!detection) {
-        alert("No face detected!");
-        document.getElementById("loading").classList.add("hidden");
-        return;
+      throw new Error("No face detected in the image.");
     }
 
-    // Get symmetry & ratios
-    const landmarks = detection.landmarks;
-    const leftEye = landmarks.getLeftEye();
-    const rightEye = landmarks.getRightEye();
-    const nose = landmarks.getNose();
-    const jaw = landmarks.getJawOutline();
+    // FAKE beauty score until we make real symmetry calc
+    const beautyScore = Math.random() * 100;
 
-    const eyeDistance = dist(midpoint(leftEye), midpoint(rightEye));
-    const noseToChin = dist(midpoint(nose), jaw[8]);
-    const symmetry = Math.abs(dist(leftEye[0], nose[0]) - dist(rightEye[3], nose[0]));
-
-    // Beauty score formula (fake but believable)
-    let beauty = 7 - (symmetry * 5 / eyeDistance) - Math.abs((eyeDistance / noseToChin) - 0.46) * 10;
-    beauty = Math.max(1, Math.min(8, beauty));
-
-    const pslData = convertBeautyToPSL(beauty);
+    const pslData = convertBeautyToPSL(beautyScore);
 
     document.getElementById("label").innerText = pslData.label;
     document.getElementById("pslScore").innerText = pslData.psl;
-    document.getElementById("beautyScore").innerText = beauty.toFixed(2);
+    document.getElementById("beautyScore").innerText = beautyScore.toFixed(1);
+    document.getElementById("uploadedImg").src = URL.createObjectURL(file);
 
-    document.getElementById("loading").classList.add("hidden");
     document.getElementById("resultCard").classList.remove("hidden");
+  } catch (err) {
+    alert("Error analyzing face:\n" + err.message);
+    console.error(err);
+  } finally {
+    document.getElementById("loading").classList.add("hidden");
+    updateProgress(0);
+  }
 }
 
-function dist(p1, p2) {
-    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
-}
-function midpoint(points) {
-    return { x: (points[0].x + points[3].x) / 2, y: (points[0].y + points[3].y) / 2 };
-}
-
-window.onload = async () => {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/models");
-    await faceapi.nets.faceLandmark68Net.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/models");
-};
+loadModels();
 </script>
 </body>
 </html>
