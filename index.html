@@ -42,9 +42,9 @@ img { max-width: 100%; border-radius: 10px; margin-top: 10px; }
     </div>
 </div>
 
+<!-- Load face-api.js -->
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 <script>
-const RAPID_KEY = "27f441c475mshe696c1d2052aad2p1ab1fejsn0e6a117bd453";
-
 function convertBeautyToPSL(score) {
     if (score < 4) return { psl: 2, label: "Subhuman" };
     if (score < 5) return { psl: 3.5, label: "MTN" };
@@ -60,50 +60,52 @@ async function analyzeFace() {
     document.getElementById("loading").classList.remove("hidden");
     document.getElementById("resultCard").classList.add("hidden");
 
-    const base64 = await toBase64(file);
+    const img = await faceapi.bufferToImage(file);
+    document.getElementById("uploadedImg").src = URL.createObjectURL(file);
 
-    try {
-        const res = await fetch("https://face-beauty-score.p.rapidapi.com/beauty-score", {
-            method: "POST",
-            headers: {
-                "content-type": "application/json",
-                "X-RapidAPI-Key": RAPID_KEY,
-                "X-RapidAPI-Host": "face-beauty-score.p.rapidapi.com"
-            },
-            body: JSON.stringify({ image_base64: base64 })
-        });
-        const data = await res.json();
-        console.log(data);
-
-        if (!data.score) throw new Error("No score returned");
-
-        const beauty = parseFloat(data.score);
-        const pslData = convertBeautyToPSL(beauty);
-
-        document.getElementById("label").innerText = pslData.label;
-        document.getElementById("pslScore").innerText = pslData.psl;
-        document.getElementById("beautyScore").innerText = beauty.toFixed(2);
-
-        document.getElementById("uploadedImg").src = URL.createObjectURL(file);
-
+    const detection = await faceapi.detectSingleFace(img).withFaceLandmarks();
+    if (!detection) {
+        alert("No face detected!");
         document.getElementById("loading").classList.add("hidden");
-        document.getElementById("resultCard").classList.remove("hidden");
-
-    } catch (err) {
-        console.error(err);
-        alert("Error analyzing face.");
-        document.getElementById("loading").classList.add("hidden");
+        return;
     }
+
+    // Get symmetry & ratios
+    const landmarks = detection.landmarks;
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+    const nose = landmarks.getNose();
+    const jaw = landmarks.getJawOutline();
+
+    const eyeDistance = dist(midpoint(leftEye), midpoint(rightEye));
+    const noseToChin = dist(midpoint(nose), jaw[8]);
+    const symmetry = Math.abs(dist(leftEye[0], nose[0]) - dist(rightEye[3], nose[0]));
+
+    // Beauty score formula (fake but believable)
+    let beauty = 7 - (symmetry * 5 / eyeDistance) - Math.abs((eyeDistance / noseToChin) - 0.46) * 10;
+    beauty = Math.max(1, Math.min(8, beauty));
+
+    const pslData = convertBeautyToPSL(beauty);
+
+    document.getElementById("label").innerText = pslData.label;
+    document.getElementById("pslScore").innerText = pslData.psl;
+    document.getElementById("beautyScore").innerText = beauty.toFixed(2);
+
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("resultCard").classList.remove("hidden");
 }
 
-function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = err => reject(err);
-    });
+function dist(p1, p2) {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
+function midpoint(points) {
+    return { x: (points[0].x + points[3].x) / 2, y: (points[0].y + points[3].y) / 2 };
+}
+
+window.onload = async () => {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/models");
+    await faceapi.nets.faceLandmark68Net.loadFromUri("https://cdn.jsdelivr.net/npm/face-api.js/models");
+};
 </script>
 </body>
 </html>
