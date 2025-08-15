@@ -41,7 +41,7 @@ function updateProgress(percent) {
 async function loadModels() {
   document.getElementById("loading").classList.remove("hidden");
   document.getElementById("loadingText").innerText = "Loading face detection models (0%)...";
-  let steps = 3; // number of model files
+  let steps = 3;
   let loaded = 0;
 
   async function loadWithProgress(promise) {
@@ -79,11 +79,9 @@ async function analyzeFace() {
     const img = await faceapi.bufferToImage(file);
     const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
-    if (!detection) {
-      throw new Error("No face detected in the image.");
-    }
+    if (!detection) throw new Error("No face detected in the image.");
 
-    // FAKE beauty score until we make real symmetry calc
+    // Fake beauty score for now
     const beautyScore = Math.random() * 100;
 
     const pslData = convertBeautyToPSL(beautyScore);
@@ -103,7 +101,9 @@ async function analyzeFace() {
   }
 }
 
-loadModels();
+window.addEventListener("load", async () => {
+  await loadModels();
+});
 </script>
 </body>
 </html>
