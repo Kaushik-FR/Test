@@ -1,19 +1,123 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Pay Payment</title>
+    <title>PSL Facial Rater</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: #111;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        input, button {
+            margin: 10px;
+        }
+        #resultCard {
+            margin-top: 20px;
+            background: #222;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <button onclick="openGooglePay()">Pay ₹100</button>
+<div class="container">
+    <h1>PSL Facial Rater</h1>
+    <input type="file" id="imageUpload" accept="image/*">
+    <br>
+    <button onclick="analyzeFace()">Rate Me</button>
+    <div id="loading" class="hidden">Analyzing...</div>
+    <div id="resultCard" class="hidden">
+        <h2 id="label"></h2>
+        <p>PSL Score: <span id="pslScore"></span></p>
+        <p>Beauty Score: <span id="beautyScore"></span></p>
+        <p>Jawline: <span id="jawline"></span></p>
+        <p>Breathing: <span id="breathing"></span></p>
+        <img id="uploadedImg" src="">
+    </div>
+</div>
 
-    <script>
-        function openGooglePay() {
-            // Google Pay deep link
-            const googlePayUrl = "upi://pay?pa=822196060@okhdfcbank&pn=RecipientName&am=100&cu=INR";
-            window.location.href = googlePayUrl;
+<script>
+const API_KEY = "c-pIdGkMPOntqK3HdjN05tsHc1oI3lTc";
+const API_SECRET = "ngLPgUgoBnkOAy5hwA06etfD4L5JmO20Hide"; // You need this from Face++ dashboard
+
+function convertBeautyToPSL(score) {
+    if (score < 40) return { psl: 2, label: "Subhuman" };
+    if (score < 50) return { psl: 3.5, label: "MTN" };
+    if (score < 60) return { psl: 5, label: "HTN" };
+    if (score < 70) return { psl: 5.5, label: "Chadlite" };
+    return { psl: 6.5, label: "Giga Chad" };
+}
+
+async function analyzeFace() {
+    const file = document.getElementById("imageUpload").files[0];
+    if (!file) {
+        alert("Upload a photo first!");
+        return;
+    }
+
+    document.getElementById("loading").classList.remove("hidden");
+    document.getElementById("resultCard").classList.add("hidden");
+
+    let formData = new FormData();
+    formData.append("api_key", API_KEY);
+    formData.append("api_secret", API_SECRET);
+    formData.append("image_file", file);
+    formData.append("return_attributes", "beauty,facequality,gender,age,headpose");
+
+    try {
+        let res = await fetch("https://api-us.faceplusplus.com/facepp/v3/detect", {
+            method: "POST",
+            body: formData
+        });
+        let data = await res.json();
+        console.log(data);
+
+        if (!data.faces || data.faces.length === 0) {
+            alert("No face detected!");
+            document.getElementById("loading").classList.add("hidden");
+            return;
         }
-    </script>
+
+        let beauty = data.faces[0].attributes.beauty.male_score;
+        let pslData = convertBeautyToPSL(beauty);
+
+        document.getElementById("label").innerText = pslData.label;
+        document.getElementById("pslScore").innerText = pslData.psl;
+        document.getElementById("beautyScore").innerText = beauty.toFixed(1);
+        document.getElementById("jawline").innerText = "Recessed"; // Placeholder
+        document.getElementById("breathing").innerText = "Mouth breather"; // Placeholder
+
+        let imgURL = URL.createObjectURL(file);
+        document.getElementById("uploadedImg").src = imgURL;
+
+        document.getElementById("loading").classList.add("hidden");
+        document.getElementById("resultCard").classList.remove("hidden");
+
+    } catch (err) {
+        console.error(err);
+        alert("Error analyzing face.");
+        document.getElementById("loading").classList.add("hidden");
+    }
+}
+</script>
 </body>
 </html>
