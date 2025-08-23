@@ -1,171 +1,224 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Brutal PSL Facial Rater</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZYGOMAGX - Face Rating</title>
 <style>
-  body {
-    background: black;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-  }
-  .container {
-    max-width: 500px;
-    margin: auto;
-    background: #111;
-    padding: 20px;
-    border-radius: 10px;
-  }
-  input, button {
-    margin: 10px;
-  }
-  img {
-    max-width: 100%;
-    border-radius: 10px;
-    margin-top: 10px;
-  }
-  #loadingBar {
-    width: 100%;
-    background: #333;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 10px;
-  }
-  #loadingProgress {
-    height: 20px;
-    width: 0%;
-    background: limegreen;
-    text-align: center;
-    font-size: 14px;
-    line-height: 20px;
-  }
-  #resultCard {
-    margin-top: 20px;
-    background: #222;
-    padding: 15px;
-    border-radius: 10px;
-  }
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+body{background:#f9f9f9;color:#333;}
+header{background:#111;color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
+header h1{font-size:24px;}
+.profile-icon{width:40px;height:40px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.container{padding:20px;max-width:800px;margin:auto;}
+.btn{background:#111;color:#fff;padding:12px 18px;border:none;cursor:pointer;border-radius:8px;margin-top:20px;}
+.btn:hover{background:#333;}
+#signup-page,#login-page,#home-page,#rating-form,#profile-page{display:none;}
+#signup-page.active,#login-page.active,#home-page.active,#rating-form.active,#profile-page.active{display:block;}
+.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+input,select{width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-radius:6px;}
 </style>
 </head>
 <body>
+<header>
+<h1>ZYGOMAGX</h1>
+<div class="profile-icon" id="profileBtn">👤</div>
+</header>
+
 <div class="container">
-  <h1>PSL Facial Rater (Brutal Mode)</h1>
-  <input type="file" id="imageUpload" accept="image/*">
-  <button onclick="rateFace()">Rate Me</button>
-  
-  <div id="loadingBar">
-    <div id="loadingProgress">0%</div>
-  </div>
-  
-  <div id="resultCard" style="display:none;">
-    <h2 id="label"></h2>
-    <p>PSL Score: <span id="pslScore"></span></p>
-    <p>Beauty Score: <span id="beautyScore"></span></p>
-    <p>Roast: <span id="roast"></span></p>
-    <img id="uploadedImg">
-  </div>
+<!-- SIGNUP PAGE -->
+<div id="signup-page">
+<div class="card">
+<h2>Signup</h2>
+<input type="text" id="signup-username" placeholder="Username">
+<input type="password" id="signup-password" placeholder="Password">
+<button class="btn" onclick="signup()">Signup</button>
+<p id="signup-msg"></p>
+<p>Already have account? <span style="color:blue;cursor:pointer;" onclick="showLogin()">Login</span></p>
+</div>
 </div>
 
-<!-- Face API JS -->
-<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<!-- LOGIN PAGE -->
+<div id="login-page" class="active">
+<div class="card">
+<h2>Login</h2>
+<input type="text" id="login-username" placeholder="Username">
+<input type="password" id="login-password" placeholder="Password">
+<button class="btn" onclick="login()">Login</button>
+<p id="login-msg"></p>
+<p>New user? <span style="color:blue;cursor:pointer;" onclick="showSignup()">Signup</span></p>
+</div>
+</div>
+
+<!-- HOME PAGE -->
+<div id="home-page">
+<div class="card">
+<h2>About Us</h2>
+<p>ZYGOMAGX is the ultimate face rating platform. Submit your details and get rated by our team.</p>
+<button class="btn" onclick="openForm()">Get Your Rating</button>
+</div>
+</div>
+
+<!-- RATING FORM -->
+<div id="rating-form">
+<div class="card">
+<h2>Submit Your Details</h2>
+<input type="number" id="age" placeholder="Your Age">
+<input type="number" id="height" placeholder="Your Height (cm)">
+<input type="file" id="facePic" accept="image/*">
+<button class="btn" onclick="submitForm()">Submit</button>
+<p id="form-msg"></p>
+</div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="profile-page">
+<div class="card">
+<h2>Your Profile</h2>
+<div id="profile-content"></div>
+<button class="btn" onclick="goHome()">Back to Home</button>
+</div>
+</div>
+</div>
+
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.0.1/firebase-firestore.js"></script>
+
 <script>
-async function loadModels() {
-  // FIXED: Use working model host
-  const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
-  let models = [
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-  ];
+const firebaseConfig = {
+apiKey:"AIzaSyABj_2mY3MzqhOVHmVshBa8vB_Ui1Rkjpo",
+authDomain:"zygomaxxed.firebaseapp.com",
+projectId:"zygomaxxed",
+storageBucket:"zygomaxxed.firebasestorage.app",
+messagingSenderId:"516071574631",
+appId:"1:516071574631:web:86afa5f1b1bab8dd9798c2",
+measurementId:"G-41VSHP5YX9"
+};
 
-  let loaded = 0;
-  for (let m of models) {
-    await m;
-    loaded++;
-    let percent = Math.round((loaded / models.length) * 100);
-    document.getElementById("loadingProgress").style.width = percent + "%";
-    document.getElementById("loadingProgress").innerText = percent + "%";
-  }
+firebase.initializeApp(firebaseConfig);
+var db=firebase.firestore();
+
+let currentUserId=null;
+
+// Page Elements
+const signupPage=document.getElementById('signup-page');
+const loginPage=document.getElementById('login-page');
+const homePage=document.getElementById('home-page');
+const ratingForm=document.getElementById('rating-form');
+const profilePage=document.getElementById('profile-page');
+const signupMsg=document.getElementById('signup-msg');
+const loginMsg=document.getElementById('login-msg');
+const formMsg=document.getElementById('form-msg');
+
+document.getElementById('profileBtn').onclick=showProfile;
+
+function showSignup(){loginPage.classList.remove('active');signupPage.classList.add('active');}
+function showLogin(){signupPage.classList.remove('active');loginPage.classList.add('active');}
+function goHome(){profilePage.classList.remove('active');homePage.classList.add('active');}
+
+// Simple password hash
+function hashPassword(p){return btoa(p);}
+
+// SIGNUP
+function signup(){
+    const username=document.getElementById('signup-username').value.trim();
+    const password=document.getElementById('signup-password').value.trim();
+    if(!username||!password){signupMsg.innerText="Fill all fields!";return;}
+    db.collection("users").where("username","==",username).get().then(snap=>{
+        if(!snap.empty){signupMsg.innerText="Username taken!";return;}
+        db.collection("users").add({
+            username:username,
+            password:hashPassword(password)
+        }).then(doc=>{
+            signupMsg.innerText="Signup successful! Login now.";
+        });
+    });
 }
-loadModels();
 
-function brutalPSLScore(beauty, symmetryPenalty, jawPenalty) {
-  let raw = (beauty * 1.2) - (symmetryPenalty * 2) - (jawPenalty * 1.5);
-  let psl = Math.max(0, Math.min(8, raw / 10 * 8));
-  return psl;
+// LOGIN
+function login(){
+    const username=document.getElementById('login-username').value.trim();
+    const password=document.getElementById('login-password').value.trim();
+    if(!username||!password){loginMsg.innerText="Fill all fields!";return;}
+    db.collection("users").where("username","==",username).get().then(snap=>{
+        if(snap.empty){loginMsg.innerText="User not found!";return;}
+        const user=snap.docs[0];
+        if(user.data().password!==hashPassword(password)){loginMsg.innerText="Wrong password!";return;}
+        currentUserId=user.id;
+        loginPage.classList.remove('active');
+        homePage.classList.add('active');
+    });
 }
 
-function getLabel(psl) {
-  if (psl < 2) return "Subhuman 💀";
-  if (psl < 3.5) return "LTN (Low-tier normie)";
-  if (psl < 4.5) return "MTN (Mid-tier normie)";
-  if (psl < 5.5) return "HTN (High-tier normie)";
-  if (psl < 6) return "Chadlite";
-  if (psl < 6.5) return "Chad";
-  if (psl < 7.5) return "Giga Chad";
-  return "Tetra Chad";
+// Open Rating Form
+function openForm(){homePage.classList.remove('active');ratingForm.classList.add('active');}
+
+// Compress image to Base64
+function compressImage(file,callback){
+    const reader=new FileReader();
+    reader.onload=function(event){
+        const img=new Image();
+        img.src=event.target.result;
+        img.onload=function(){
+            const canvas=document.createElement('canvas');
+            const ctx=canvas.getContext('2d');
+            const MAX_WIDTH=300;
+            const scaleSize=MAX_WIDTH/img.width;
+            canvas.width=MAX_WIDTH;
+            canvas.height=img.height*scaleSize;
+            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+            callback(canvas.toDataURL('image/jpeg',0.7));
+        }
+    }
+    reader.readAsDataURL(file);
 }
 
-function getRoast(psl) {
-  const roasts = {
-    0: "Bro, your face is a war crime.",
-    2: "She left you on read for a reason.",
-    3.5: "Average face, average life.",
-    4.5: "You get matches… sometimes.",
-    5.5: "Chadlite… but only in dim lighting.",
-    6: "Chad. Women fear you, men want you.",
-    7: "Giga Chad. Zeus is your cousin."
-  };
-  let keys = Object.keys(roasts).map(Number).sort((a,b)=>a-b);
-  let closest = keys.reduce((prev, curr) => Math.abs(curr - psl) < Math.abs(prev - psl) ? curr : prev);
-  return roasts[closest];
+// Submit Rating
+function submitForm(){
+    const age=document.getElementById('age').value.trim();
+    const height=document.getElementById('height').value.trim();
+    const file=document.getElementById('facePic').files[0];
+    if(!age||!height||!file){formMsg.innerText="Fill all fields!";return;}
+    compressImage(file,function(base64Img){
+        db.collection("ratings").add({
+            userId:currentUserId,
+            age:age,
+            height:height,
+            imgBase64:base64Img,
+            status:"pending",
+            timestamp:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(()=>{formMsg.innerText="Thanks! Wait for your rating.";setTimeout(()=>{ratingForm.classList.remove('active');homePage.classList.add('active');},2000);})
+        .catch(err=>{console.error(err);formMsg.innerText="Error submitting form!";});
+    });
 }
 
-async function rateFace() {
-  const file = document.getElementById("imageUpload").files[0];
-  if (!file) return alert("Upload a photo first!");
-
-  let img = await faceapi.bufferToImage(file);
-  document.getElementById("uploadedImg").src = img.src;
-
-  try {
-    const detection = await faceapi
-      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks();
-
-    if (!detection) return alert("No face detected!");
-
-    let landmarks = detection.landmarks;
-
-    // Simple symmetry calc: difference between left and right eye distances
-    let leftEye = landmarks.getLeftEye();
-    let rightEye = landmarks.getRightEye();
-    let symmetryPenalty = Math.abs((leftEye[3].x - leftEye[0].x) - (rightEye[3].x - rightEye[0].x)) / 10;
-
-    // Jaw penalty: distance from chin to nose vs nose to forehead
-    let jaw = landmarks.getJawOutline();
-    let nose = landmarks.getNose();
-    let jawLen = Math.abs(jaw[8].y - nose[6].y);
-    let upperLen = Math.abs(nose[0].y - landmarks.getLeftEyeBrow()[0].y);
-    let jawPenalty = (jawLen / upperLen) > 1.8 ? 1 : 0; // long face penalty
-
-    // Fake but consistent beauty score 0–100 based on symmetry and jaw
-    let beautyScore = Math.max(20, 100 - (symmetryPenalty * 10) - (jawPenalty * 15));
-
-    let psl = brutalPSLScore(beautyScore, symmetryPenalty, jawPenalty);
-    let label = getLabel(psl);
-    let roast = getRoast(psl);
-
-    document.getElementById("beautyScore").innerText = beautyScore.toFixed(1);
-    document.getElementById("pslScore").innerText = psl.toFixed(1);
-    document.getElementById("label").innerText = label;
-    document.getElementById("roast").innerText = roast;
-    document.getElementById("resultCard").style.display = "block";
-
-  } catch (err) {
-    alert("Error analysing face: " + err.message);
-  }
+// Show Profile
+function showProfile(){
+    if(!currentUserId){alert("Login first");return;}
+    homePage.classList.remove('active');
+    profilePage.classList.add('active');
+    const content=document.getElementById('profile-content');
+    content.innerHTML="Loading...";
+    db.collection("ratings").where("userId","==",currentUserId).orderBy("timestamp","desc").get().then(snap=>{
+        if(snap.empty){content.innerHTML="No submissions yet.";}
+        else{
+            content.innerHTML="";
+            snap.docs.forEach(doc=>{
+                const d=doc.data();
+                const card=document.createElement('div');
+                card.className="card";
+                card.style.marginBottom="10px";
+                card.innerHTML=`<p>Age: ${d.age}</p>
+                                <p>Height: ${d.height}</p>
+                                <p>Status: ${d.status}</p>
+                                ${d.rating?`<p>Rating: ${d.rating}</p>`:""}
+                                <img src="${d.imgBase64}" style="width:100%;max-width:200px;border-radius:8px;">`;
+                content.appendChild(card);
+            });
+        }
+    });
 }
 </script>
 </body>
