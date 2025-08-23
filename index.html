@@ -1,32 +1,47 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZYGOMAGX - Face Rating</title>
+<title>ZYGOMAGX - Face Rating & Blackpill</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-body{background:#f9f9f9;color:#333;}
-header{background:#111;color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
-header h1{font-size:24px;}
-.profile-icon{width:40px;height:40px;border-radius:50%;background:#444;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-.container{padding:20px;max-width:800px;margin:auto;}
-.btn{background:#111;color:#fff;padding:12px 18px;border:none;cursor:pointer;border-radius:8px;margin-top:20px;}
-.btn:hover{background:#333;}
+body{background:#111;color:#fff;}
+header{background:#000;color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.5);}
+header h1{font-size:28px;font-weight:bold;}
+.profile-icon{width:40px;height:40px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;transition:0.3s;}
+.profile-icon:hover{background:#444;}
+.container{padding:20px;max-width:900px;margin:auto;}
+.btn{background:#222;color:#fff;padding:12px 20px;border:none;cursor:pointer;border-radius:8px;margin-top:20px;transition:0.3s;font-weight:bold;}
+.btn:hover{background:#555;}
 #signup-page,#login-page,#home-page,#rating-form,#profile-page{display:none;}
 #signup-page.active,#login-page.active,#home-page.active,#rating-form.active,#profile-page.active{display:block;}
-.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-input,select{width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-radius:6px;}
+.card{background:#1a1a1a;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.3);margin-bottom:20px;transition:0.3s;}
+.card:hover{box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+input,select,textarea{width:100%;padding:10px;margin:10px 0;border:1px solid #333;border-radius:6px;background:#111;color:#fff;}
+input::placeholder,textarea::placeholder{color:#aaa;}
+textarea{resize:none;}
+img{max-width:100%;border-radius:8px;margin-top:10px;}
+.hero{background:linear-gradient(135deg,#111,#222,#000);padding:40px;text-align:center;border-radius:10px;margin-bottom:20px;}
+.hero h1{font-size:36px;margin-bottom:20px;}
+.hero p{font-size:18px;margin-bottom:20px;color:#aaa;}
+#blackpill-feed{display:flex;overflow-x:auto;padding:10px 0;margin-bottom:20px;}
+.blackpill-card{min-width:250px;background:#222;margin-right:15px;padding:15px;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,0.4);flex-shrink:0;}
+.stats{display:flex;justify-content:space-around;margin-bottom:20px;}
+.stats div{background:#222;padding:15px;border-radius:8px;text-align:center;flex:1;margin:0 5px;}
+.stats div p:first-child{font-size:20px;font-weight:bold;color:#0f0;}
+.stats div p:last-child{color:#aaa;}
 </style>
 </head>
 <body>
+
 <header>
 <h1>ZYGOMAGX</h1>
 <div class="profile-icon" id="profileBtn">👤</div>
 </header>
 
 <div class="container">
+
 <!-- SIGNUP PAGE -->
 <div id="signup-page">
 <div class="card">
@@ -53,10 +68,30 @@ input,select{width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-
 
 <!-- HOME PAGE -->
 <div id="home-page">
+<div class="hero">
+<h1>Face Rating & Reality Check</h1>
+<p>Submit your face and get brutally rated by our team. Blackpill knowledge included.</p>
+<button class="btn" onclick="openForm()">Get Your Rating</button>
+</div>
+
+<div class="stats">
+<div><p id="total-submissions">0</p><p>Submissions</p></div>
+<div><p id="total-rated">0</p><p>Rated</p></div>
+</div>
+
 <div class="card">
 <h2>About Us</h2>
-<p>ZYGOMAGX is the ultimate face rating platform. Submit your details and get rated by our team.</p>
-<button class="btn" onclick="openForm()">Get Your Rating</button>
+<p>ZYGOMAGX is the ultimate face rating platform. Submit your details, get rated, and learn savage truths about looks and potential.</p>
+</div>
+
+<h2>Blackpill Knowledge</h2>
+<div id="blackpill-feed">
+<div class="blackpill-card">Average male has almost no chance with top 10% women.</div>
+<div class="blackpill-card">Looks > Personality, always.</div>
+<div class="blackpill-card">Height and jawline dictate early social success.</div>
+<div class="blackpill-card">Chad energy cannot be faked, only trained.</div>
+<div class="blackpill-card">Females subconsciously rate men within 0.3 seconds.</div>
+<div class="blackpill-card">Subhuman face = social invisibility unless massive skill or money.</div>
 </div>
 </div>
 
@@ -80,6 +115,7 @@ input,select{width:100%;padding:10px;margin:10px 0;border:1px solid #ccc;border-
 <button class="btn" onclick="goHome()">Back to Home</button>
 </div>
 </div>
+
 </div>
 
 <!-- Firebase Scripts -->
@@ -96,7 +132,6 @@ messagingSenderId:"516071574631",
 appId:"1:516071574631:web:86afa5f1b1bab8dd9798c2",
 measurementId:"G-41VSHP5YX9"
 };
-
 firebase.initializeApp(firebaseConfig);
 var db=firebase.firestore();
 
@@ -149,6 +184,7 @@ function login(){
         currentUserId=user.id;
         loginPage.classList.remove('active');
         homePage.classList.add('active');
+        updateStats();
     });
 }
 
@@ -189,7 +225,7 @@ function submitForm(){
             imgBase64:base64Img,
             status:"pending",
             timestamp:firebase.firestore.FieldValue.serverTimestamp()
-        }).then(()=>{formMsg.innerText="Thanks! Wait for your rating.";setTimeout(()=>{ratingForm.classList.remove('active');homePage.classList.add('active');},2000);})
+        }).then(()=>{formMsg.innerText="Thanks! Wait for your rating.";setTimeout(()=>{ratingForm.classList.remove('active');homePage.classList.add('active');updateStats();},2000);})
         .catch(err=>{console.error(err);formMsg.innerText="Error submitting form!";});
     });
 }
@@ -210,16 +246,42 @@ function showProfile(){
                 const card=document.createElement('div');
                 card.className="card";
                 card.style.marginBottom="10px";
-                card.innerHTML=`<p>Age: ${d.age}</p>
-                                <p>Height: ${d.height}</p>
-                                <p>Status: ${d.status}</p>
-                                ${d.rating?`<p>Rating: ${d.rating}</p>`:""}
-                                <img src="${d.imgBase64}" style="width:100%;max-width:200px;border-radius:8px;">`;
+                card.innerHTML=`
+                    <p>Age: ${d.age}</p>
+                    <p>Height: ${d.height}</p>
+                    <p>Status: ${d.status}</p>
+                    ${d.rating?`<p>Rating: ${d.rating}</p>`:""}
+                    ${d.potential?`<p>Potential: ${d.potential}</p>`:""}
+                    ${d.goodFeatures?`<p>Good Features: ${d.goodFeatures}</p>`:""}
+                    ${d.badFeatures?`<p>Bad Features: ${d.badFeatures}</p>`:""}
+                    <img src="${d.imgBase64}" style="width:100%;max-width:200px;border-radius:8px;">
+                `;
                 content.appendChild(card);
             });
         }
     });
 }
+
+// Update Stats
+function updateStats(){
+    db.collection("ratings").get().then(snap=>{
+        document.getElementById('total-submissions').innerText=snap.size;
+    });
+    db.collection("ratings").where("status","==","rated").get().then(snap=>{
+        document.getElementById('total-rated').innerText=snap.size;
+    });
+}
+
+// Blackpill feed rotation
+const feed=document.getElementById('blackpill-feed');
+setInterval(()=>{
+    if(feed.children.length>0){
+        const first=feed.children[0];
+        feed.appendChild(first.cloneNode(true));
+        feed.removeChild(first);
+    }
+},5000);
+
 </script>
 </body>
 </html>
